@@ -1,0 +1,119 @@
+/* Reset some default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-image: url("blur-background.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #F4F4F4;
+    min-height: 100vh;
+}
+
+header{
+    position: relative;
+    background-color: black;
+    width: 100%;
+    padding: 20px 100px;
+    background: #333333;
+}
+
+img{
+    float: right;
+    width: 50%;
+    height: 50%;
+}
+.container {
+    background-color: #ffffff;
+    background: white;
+    border: 2px solid rgba(255,255,255,.5);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 30px rgba(0, 0, 0, .5);
+    width: 400px;
+    padding: 20px;
+    text-align: left;
+}
+
+
+.wrapper{
+    position: relative;
+    left: 0;
+    top: 0;
+    width: 75%;
+    height: 700px;
+    margin-top: 30px;
+    background: white;
+    border: 2px solid rgba(255,255,255,.5);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 30px rgba(0, 0, 0, .5);
+    justify-content: center;
+    align-items: center;
+}
+
+
+
+input{
+    background-color: #D9D9D9;
+    border-radius: 4px;
+}
+
+
+.buttons{
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-item{
+    margin: 5px;
+}
+
+#navbar {
+    padding: 2px;
+}
+
+#navbar h2{
+    color: white;
+    font-weight: 600;
+    font-size: 2rem;
+}
+
+#navbar a{
+    margin-left: 30px;
+}
+
+
+#navbar h4{
+    color: white;
+    font-size: 30px;
+}
+
+
+#signup-profile-picture {
+    margin-top: 10px;
+    border-radius: 5px;
+}
+
+#my-rides-list {
+    margin: 5px 0;
+    text-align: left;
+    height: 500px;
+    overflow-y: auto;
+}
+
+#my-rides-list p {
+    padding: 5px;
+}
+.ride {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+}
