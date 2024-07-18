@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RideShare</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/landingstyles.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        header h2 {
+            font-size: 1.5rem;
+        }
+        .nav-link h4 {
+            font-size: 1.2rem;
+        }
+        .form-container {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        .form-container h2, .form-container h3 {
+            text-align: center;
+        }
+        .form-container input, .form-container select, .form-container button {
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+        }
+        .form-container button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+        }
+        .hidden {
+            display: none;
+        }
+        @media (max-width: 576px) {
+            header h2 {
+                font-size: 1.2rem;
+            }
+            .nav-link h4 {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="container-fluid" id="navbar">
+        <nav class="navbar navbar-expand-lg navbar-light bg-transparent">
+            <a class="navbar-brand" onclick="clearUsers()" href="#"><h2>RideShare</h2></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link login-link" onclick="showLoginForm()" href="#" id="login"><h4>Login</h4></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" onclick="showSignupForm()" href="#" id="signup"><h4>Sign Up</h4></a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+<div class="container wrapper">
+    <div id="login-form" class="form-container">
+        <h2>Login</h2>
+        <input type="text" id="login-username" placeholder="Username" required>
+        <input type="password" id="login-password" placeholder="Password" required>
+        <button onclick="login()">Login</button>
+        <p>Don't have an account? <a href="#" onclick="showSignupForm()">Sign Up</a></p>
+    </div>
+    <div id="signup-form" class="form-container hidden">
+        <h2>Sign Up</h2>
+        <input type="text" id="signup-username" placeholder="Username" required>
+        <input type="password" id="signup-password" placeholder="Password" required>
+        <select id="signup-role" required onchange="toggleDriverFields()">
+            <option value="" disabled selected>Select your role</option>
+            <option value="student">Student</option>
+            <option value="faculty">Faculty</option>
+            <option value="driver">Driver</option>
+        </select>
+        <input type="text" id="signup-gender" placeholder="Gender" required>
+        <input type="file" id="signup-profile-picture" accept="image/png, image/jpeg" required>
+
+        <div id="driver-fields" class="hidden">
+            <h3>Driver Details</h3>
+            <input type="text" id="driver-name" placeholder="Name">
+            <input type="text" id="driver-phone" placeholder="Phone Number">
+            <input type="text" id="driver-car-model" placeholder="Car Model">
+            <input type="text" id="driver-car-number" placeholder="Car Number">
+        </div>
+
+        <button onclick="signup()">Sign Up</button>
+        <p>Already have an account? <a href="#" onclick="showLoginForm()">Login</a></p>
+    </div>
+</div>
+<script>
+    function showSignupForm() {
+        document.getElementById('login-form').classList.add('hidden');
+        document.getElementById('signup-form').classList.remove('hidden');
+    }
+
+    function showLoginForm() {
+        document.getElementById('signup-form').classList.add('hidden');
+        document.getElementById('login-form').classList.remove('hidden');
+    }
+
+    function toggleDriverFields() {
+        const role = document.getElementById('signup-role').value;
+        const driverFields = document.getElementById('driver-fields');
+        if (role === 'driver') {
+            driverFields.classList.remove('hidden');
+        } else {
+            driverFields.classList.add('hidden');
+        }
+    }
+
+    function getUsers() {
+        const users = JSON.parse(localStorage.getItem('users'));
+        console.log('Loaded users:', users);
+        return users ? users : [];
+    }
+
+    function saveUsers(users) {
+        localStorage.setItem('users', JSON.stringify(users));
+        console.log('Saved users:', users);
+    }
+
+    function clearUsers() {
+        localStorage.removeItem('users');
+        console.log('All users cleared');
+        alert('All users have been cleared');
+    }
+
+    function login() {
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        const users = getUsers();
+        const user = users.find(user => user.username === username && user.password === password);
+
+        if (user) {
+            localStorage.setItem('currentUser', user.username);
+            window.location.href = '/home';
+        } else {
+            alert('Invalid username or password');
+        }
+    }
+
+    function resizeImage(file, maxSize, callback) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height *= maxSize / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width *= maxSize / height;
+                        height = maxSize;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg');
+                callback(dataUrl);
+            }
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+
+    function signup() {
+        const username = document.getElementById('signup-username').value;
+        const password = document.getElementById('signup-password').value;
+        const role = document.getElementById('signup-role').value;
+        const gender = document.getElementById('signup-gender').value;
+        const profilePictureInput = document.getElementById('signup-profile-picture');
+        const profilePicture = profilePictureInput.files[0];
+        const users = getUsers();
+
+        // Validate required fields
+        if (!username || !password || !role || !gender || !profilePicture) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        // Check if username already exists
+        if (users.find(user => user.username === username)) {
+            alert('Username already exists');
+            return;
+        }
+
+        resizeImage(profilePicture, 300, function(resizedImage) {
+            let user = { username, password, role, gender, profilePicture: resizedImage };
+
+            if (role === 'driver') {
+                const name = document.getElementById('driver-name').value;
+                const driverPhone = document.getElementById('driver-phone').value;
+                const carModel = document.getElementById('driver-car-model').value;
+                const carNumber = document.getElementById('driver-car-number').value;
+
+                // Validate driver-specific fields
+                if (!name || !driverPhone || !carModel || !carNumber) {
+                    alert('Please fill in all driver details');
+                    return;
+                }
+
+                user = { ...user, name, driverPhone, carModel, carNumber };
+            }
+
+            users.push(user);
+            saveUsers(users);
+            console.log('Current users after signup:', users); // Log the current users
+            alert('Account created successfully');
+            showLoginForm();
+        });
+    }
+</script>
+
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+</body>
+</html>

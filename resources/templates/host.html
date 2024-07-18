@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Host a Ride</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel="stylesheet" href="../static/hoststyles.css">
+</head>
+<body>
+<header>
+    <div class="container-fluid" id="navbar">
+        <nav class="navbar navbar-expand-lg navbar-light bg-transparent">
+            <a class="navbar-brand" href="#"><h2>RideShare</h2></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="home()">Home</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="viewAllRides()">View All Rides</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="viewMyRides()">My Rides</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="searchRides()">Search Rides</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-danger" onclick="logout()">Logout</button>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+<div class="container wrapper">
+    <h1>Host a Ride</h1>
+    <div class="form-container">
+        <select id="start-location" required>
+            <option value="" disabled selected>Start Location</option>
+            <option value="campus">Campus</option>
+            <option value="airport">Airport</option>
+            <option value="secunderabad railway station">Secunderabad Railway Station</option>
+        </select>
+        <select id="end-location" required>
+            <option value="" disabled selected>End Location</option>
+            <option value="campus">Campus</option>
+            <option value="airport">Airport</option>
+            <option value="secunderabad railway station">Secunderabad Railway Station</option>
+        </select>
+
+        <label for="seats">Number of Seats</label>
+        <select id="seats">
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="7">7</option>
+        </select>
+
+        <label for="ride-date">Date</label>
+        <input type="date" id="ride-date">
+
+        <label for="ride-time">Time</label>
+        <select id="ride-time"></select>
+
+        <div id="driver-details-section">
+            <h3>Driver Details</h3>
+            <label for="driver-username">Driver Username</label>
+            <input type="text" id="driver-username" placeholder="Enter driver username">
+        </div>
+
+        <div id="seat-selection"></div>
+
+        <button onclick="hostRide()">Host Ride</button>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('ride-date').setAttribute('min', today);
+        populateTimeDropdown('ride-time');
+        document.getElementById('seats').addEventListener('change', initializeSeatButtons);
+
+        const currentUser = getCurrentUser();
+        const users = getUsers();
+        const user = users.find(u => u.username === currentUser);
+
+        if (user.role === 'driver') {
+            document.getElementById('driver-details-section').classList.add('hidden');
+        } else {
+            document.getElementById('driver-details-section').classList.remove('hidden');
+        }
+
+        console.log('Host a Ride page loaded');
+    });
+
+    function getUsers() {
+        return JSON.parse(localStorage.getItem('users')) || [];
+    }
+
+    function getCurrentUser() {
+        return localStorage.getItem('currentUser');
+    }
+
+    function populateTimeDropdown(elementId) {
+        const timeDropdown = document.getElementById(elementId);
+        const intervals = 15;
+        let currentTime = new Date();
+        currentTime.setMinutes(Math.ceil(currentTime.getMinutes() / intervals) * intervals);
+        currentTime.setSeconds(0);
+
+        for (let i = 0; i < 96; i++) {
+            const timeOption = document.createElement('option');
+            timeOption.value = currentTime.toTimeString().substring(0, 5);
+            timeOption.innerText = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            timeDropdown.appendChild(timeOption);
+            currentTime.setMinutes(currentTime.getMinutes() + intervals);
+        }
+        console.log('Time dropdown populated');
+    }
+
+    function initializeSeatButtons() {
+        const seats = parseInt(document.getElementById('seats').value);
+        const seatLayout = generateSeatLayout(seats);
+        const seatSelectionDiv = document.getElementById('seat-selection');
+        seatSelectionDiv.innerHTML = '';
+
+        for (const seat in seatLayout) {
+            const seatButton = document.createElement('button');
+            seatButton.innerText = seat;
+            seatButton.classList.add('seat-button', seatLayout[seat] ? 'available' : 'taken');
+            seatButton.disabled = !seatLayout[seat];
+            seatButton.onclick = () => selectSeat(seat);
+            seatSelectionDiv.appendChild(seatButton);
+        }
+        console.log('Seat buttons initialized');
+    }
+
+    function selectSeat(seat) {
+        const seatButtons = document.querySelectorAll('.seat-button');
+        seatButtons.forEach(button => button.classList.remove('selected'));
+        const selectedButton = Array.from(seatButtons).find(button => button.innerText === seat);
+        selectedButton.classList.add('selected');
+
+        console.log(`Selected seat: ${seat}`);
+    }
+
+    function toggleSeatSelection(seat) {
+        const seatButtons = document.querySelectorAll('.seat-button');
+        const selectedButton = Array.from(seatButtons).find(button => button.innerText === seat);
+
+        // Toggle selection state
+        if (selectedButton.classList.contains('selected')) {
+            selectedButton.classList.remove('selected');
+        } else {
+            selectedButton.classList.add('selected');
+        }
+
+        // Optional: Log the current selection for debugging or tracking
+        const selectedSeats = Array.from(seatButtons)
+            .filter(button => button.classList.contains('selected'))
+            .map(button => button.innerText);
+        console.log(`Selected seats: ${selectedSeats.join(', ')}`);
+    }
+
+
+
+
+    function hostRide() {
+        console.log('Host ride function triggered');
+        const startLocation = document.getElementById('start-location').value;
+        const endLocation = document.getElementById('end-location').value;
+        const seats = parseInt(document.getElementById('seats').value);
+        const date = document.getElementById('ride-date').value;
+        const time = document.getElementById('ride-time').value;
+        const currentUser = getCurrentUser();
+        const users = getUsers();
+        const user = users.find(user => user.username === currentUser);
+        let driverDetails = 'No driver found';
+        let driverUsername = currentUser;
+
+        if (user.role === 'driver') {
+            driverDetails = `Name: ${user.name}, Phone: ${user.driverPhone}, Car Model: ${user.carModel}, Car Number: ${user.carNumber}`;
+        } else {
+            driverUsername = document.getElementById('driver-username').value;
+            const driver = users.find(u => u.username === driverUsername && u.role === 'driver');
+
+            // Check if the selected driver is already driving another ride at the same date and time
+            const driverAlreadyDriving = getRides().some(ride => {
+                return ride.driverDetails && ride.driverDetails.includes(driverUsername) && ride.date === date && ride.time === time;
+            });
+
+            if (driverAlreadyDriving) {
+                alert('This driver is already driving another ride at the same date and time. Please choose a different driver or change the ride schedule.');
+                return;
+            }
+
+            if (driver) {
+                driverDetails = `Name: ${driver.name}, Phone: ${driver.driverPhone}, Car Model: ${driver.carModel}, Car Number: ${driver.carNumber}`;
+            } else {
+                alert('Driver not found in our system. Please make sure your driver has an account before he can be your driver');
+                return;
+            }
+        }
+
+
+        const { rideTime, ridePrice } = calculateTimeAndPrice(startLocation, endLocation);
+
+        // Initialize seats
+        const seatLayout = generateSeatLayout(seats);
+        const otp = generateOTP();
+
+        if (startLocation && endLocation && seats && date && time) {
+            const ride = { startLocation, endLocation, seats, date, time, rideTime, ridePrice, driverDetails, host: currentUser, riders: [], seatLayout, otp };
+            ride.rideId = generateUniqueId(ride);
+
+            if (user.role === 'driver') {
+                ride.riders.push({ username: currentUser, seat: 'D' });
+                ride.seatLayout.D = false; // Mark driver's seat as taken
+            } else {
+                const selectedSeatElement = document.querySelector('.seat-button.selected');
+                if (!selectedSeatElement) {
+                    alert('Please select a seat');
+                    return;
+                }
+                const selectedSeat = selectedSeatElement.innerText;
+                ride.riders.push({ username: currentUser, seat: selectedSeat });
+                ride.seatLayout[selectedSeat] = false;
+            }
+
+            saveRide(ride);
+            alert(`Ride hosted from ${startLocation} to ${endLocation} on ${date} at ${time} with ${seats} seats.`);
+            addRideToDriver(driverUsername, ride.rideId); // Add ride to driver's rides
+        } else {
+            alert('Please fill in all fields');
+        }
+    }
+
+    function calculateTimeAndPrice(start, end) {
+        let rideTime = 0;
+        let ridePrice = 0;
+
+        if (start === end) {
+            rideTime = 0;
+            ridePrice = 0;
+        } else if (start === 'campus') {
+            if (end === 'airport') {
+                rideTime = '1 hour';
+                ridePrice = 1199;
+            } else if (end === 'secunderabad railway station') {
+                rideTime = '0.5 hour';
+                ridePrice = 700;
+            }
+        } else if (start === 'airport') {
+            if (end === 'campus') {
+                rideTime = '1 hour';
+                ridePrice = 1199;
+            } else if (end === 'secunderabad railway station') {
+                rideTime = '1 hour';
+                ridePrice = 1199;
+            }
+        } else if (start === 'secunderabad railway station') {
+            if (end === 'airport') {
+                rideTime = '1 hour';
+                ridePrice = 1199;
+            } else if (end === 'campus') {
+                rideTime = '0.5 hour';
+                ridePrice = 700;
+            }
+        }
+
+        return { rideTime, ridePrice };
+    }
+
+    function generateUniqueId(ride) {
+        const dateTime = `${ride.date.replace(/-/g, '')}${ride.time.replace(/:/g, '')}`;
+        const startLocationInitial = ride.startLocation.charAt(0).toUpperCase();
+        const endLocationInitial = ride.endLocation.charAt(0).toUpperCase();
+        const seats = ride.seats;
+        const driverStatus = ride.driverDetails ? 'DY' : 'DN';
+        return `${dateTime}-${startLocationInitial}${endLocationInitial}${seats}${driverStatus}`;
+    }
+
+    function generateSeatLayout(seats) {
+        const layout = {};
+        if (seats === 4) {
+            layout.S = true; // Shotgun
+            layout.D = false; // Driver
+            layout.W1 = true; // Window 1
+            layout.W2 = true; // Window 2
+        } else if (seats === 5) {
+            layout.S = true;
+            layout.D = false; // Driver
+            layout.W1 = true;
+            layout.M1 = true; // Middle 1
+            layout.W2 = true;
+        } else if (seats === 7) {
+            layout.S = true;
+            layout.D = false; // Driver
+            layout.W1 = true;
+            layout.M1 = true; // Middle 1
+            layout.W2 = true;
+            layout.W3 = true; // Window 3
+            layout.W4 = true; // Window 4
+        }
+        return layout;
+    }
+
+    function generateOTP() {
+        return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    function getRides() {
+        const rides = JSON.parse(localStorage.getItem('rides')) || [];
+        return rides.map(ride => {
+            if (!ride.rideId) {
+                ride.rideId = generateUniqueId(ride);
+            }
+            return ride;
+        });
+    }
+
+    function saveRides(rides) {
+        localStorage.setItem('rides', JSON.stringify(rides));
+    }
+
+    function saveRide(ride) {
+        const rides = getRides();
+        rides.push(ride);
+        saveRides(rides);
+        console.log('Ride saved:', ride);
+        alert('Ride saved successfully');
+    }
+
+    function addRideToDriver(driverUsername, rideId) {
+        const users = getUsers();
+        const driver = users.find(u => u.username === driverUsername);
+        if (driver) {
+            driver.myRides = driver.myRides || [];
+            driver.myRides.push(rideId);
+            saveUsers(users);
+            console.log('Ride added to driver\'s myRides:', driver);
+        }
+    }
+
+    function saveUsers(users) {
+        localStorage.setItem('users', JSON.stringify(users));
+    }
+
+    function logout() {
+        localStorage.removeItem('currentUser');
+        window.location.href = '../templates/login.html';
+    }
+
+    function home() {
+        window.location.href = '../templates/home.html';
+    }
+
+    function viewAllRides() {
+        window.location.href = '../templates/allRides.html';
+    }
+
+    function viewMyRides() {
+        window.location.href = '../templates/myRides.html';
+    }
+
+    function searchRides() {
+        window.location.href = '../templates/login.html';
+    }
+
+</script>
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search for a Ride</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel="stylesheet" href="../static/profilestyles.css">
+</head>
+<body>
+<header>
+    <div class="container-fluid" id="navbar">
+        <nav class="navbar navbar-expand-lg navbar-light bg-transparent">
+            <a class="navbar-brand" href="#"><h2>RideShare</h2></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="home()">Home</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="hostRidePage()">Host a Ride</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="viewAllRides()">View All Rides</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="viewMyRides()">My Rides</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-danger" onclick="logout()">Logout</button>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+<div class="container wrapper">
+    <div class="form-container">
+        <h2>Search for a Ride</h2>
+        <select id="search-start-location" required>
+            <option value="" disabled selected>Start Location</option>
+            <option value="campus">Campus</option>
+            <option value="airport">Airport</option>
+            <option value="secunderabad railway station">Secunderabad Railway Station</option>
+        </select>
+        <select id="search-end-location" required>
+            <option value="" disabled selected>End Location</option>
+            <option value="campus">Campus</option>
+            <option value="airport">Airport</option>
+            <option value="secunderabad railway station">Secunderabad Railway Station</option>
+        </select>
+        <input type="date" id="search-date" required>
+        <select id="search-time" required>
+            <option value="" disabled selected>Time</option>
+        </select>
+        <button onclick="searchRide()">Search</button>
+        <div id="search-results" class="hidden">
+            <h3>Available Rides</h3>
+            <div id="rides-list"></div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('search-date').setAttribute('min', today);
+        populateTimeDropdown('search-time');
+    });
+
+    function populateTimeDropdown(elementId) {
+        const timeDropdown = document.getElementById(elementId);
+        const intervals = 15;
+        let currentTime = new Date();
+        currentTime.setMinutes(Math.ceil(currentTime.getMinutes() / intervals) * intervals);
+        currentTime.setSeconds(0);
+
+        for (let i = 0; i < 96; i++) {
+            const timeOption = document.createElement('option');
+            timeOption.value = currentTime.toTimeString().substring(0, 5);
+            timeOption.innerText = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            timeDropdown.appendChild(timeOption);
+            currentTime.setMinutes(currentTime.getMinutes() + intervals);
+        }
+    }
+
+    function searchRide() {
+        const startLocation = document.getElementById('search-start-location').value;
+        const endLocation = document.getElementById('search-end-location').value;
+        const date = document.getElementById('search-date').value;
+        const time = document.getElementById('search-time').value;
+
+        if (startLocation && endLocation && date && time) {
+            const rides = getRides().filter(ride =>
+                ride.startLocation === startLocation &&
+                ride.endLocation === endLocation &&
+                ride.date >= date &&
+                ride.time >= time
+            );
+            displayRides(rides);
+        } else {
+            alert('Please fill in all required fields');
+        }
+    }
+
+    function getRides() {
+        const rides = JSON.parse(localStorage.getItem('rides'));
+        return rides ? rides : [];
+    }
+
+    function getUsers() {
+        const users = JSON.parse(localStorage.getItem('users'));
+        return users ? users : [];
+    }
+
+    function getCurrentUser() {
+        return localStorage.getItem('currentUser');
+    }
+
+    function displayRides(rides) {
+        const ridesList = document.getElementById('rides-list');
+        ridesList.innerHTML = '';
+
+        if (rides.length === 0) {
+            ridesList.innerHTML = '<p>No available rides matching your criteria.</p>';
+        } else {
+            rides.forEach(ride => {
+                const currentUser = getCurrentUser();
+                const users = getUsers();
+                const user = users.find(user => user.username === currentUser);
+                const isUserPartOfRide = ride.riders.some(r => r.username === currentUser);
+
+                const rideElement = document.createElement('div');
+                rideElement.className = 'ride';
+                rideElement.innerHTML = `
+                <p>From: ${ride.startLocation}</p>
+                <p>To: ${ride.endLocation}</p>
+                <p>Date: ${ride.date}</p>
+                <p>Time: ${ride.time}</p>
+                <p>Seats: ${ride.seats}</p>
+                <p>Driver: ${ride.driverDetails ? ride.driverDetails : 'No driver found'}</p>
+                <p>Host: ${ride.host}</p>
+                ${generateSeatButtons(ride.seatLayout)}
+                ${!isUserPartOfRide && (user.role === 'student' || user.role === 'faculty') ? `<button onclick="selectSeatForRide('${ride.startLocation}', '${ride.endLocation}', '${ride.date}', '${ride.time}', '${ride.host}')">Join Ride</button>` : ''}
+            `;
+                ridesList.appendChild(rideElement);
+            });
+        }
+
+        document.getElementById('search-results').classList.remove('hidden');
+    }
+
+    function generateSeatButtons(seatLayout) {
+        let seatButtonsHtml = `<div class="seat-row">
+        <button class="seat-button ${!seatLayout.D ? 'taken' : 'available'}" disabled>D</button>
+        <button class="seat-button ${seatLayout.S ? 'available' : 'taken'}" onclick="selectSeat('S', ${seatLayout.S})">S</button>
+    </div>
+    <div class="seat-row">
+        <button class="seat-button ${seatLayout.W1 ? 'available' : 'taken'}" onclick="selectSeat('W1', ${seatLayout.W1})">W1</button>
+        <button class="seat-button ${seatLayout.W2 ? 'available' : 'taken'}" onclick="selectSeat('W2', ${seatLayout.W2})">W2</button>
+    </div>`;
+
+        if (seatLayout.M1 !== undefined) {
+            seatButtonsHtml += `<div class="seat-row">
+            <button class="seat-button ${seatLayout.M1 ? 'available' : 'taken'}" onclick="selectSeat('M1', ${seatLayout.M1})">M1</button>
+        </div>`;
+        }
+        if (seatLayout.W3 !== undefined || seatLayout.W4 !== undefined) {
+            seatButtonsHtml += `<div class="seat-row">
+            <button class="seat-button ${seatLayout.W3 ? 'available' : 'taken'}" onclick="selectSeat('W3', ${seatLayout.W3})">W3</button>
+            <button class="seat-button ${seatLayout.W4 ? 'available' : 'taken'}" onclick="selectSeat('W4', ${seatLayout.W4})">W4</button>
+        </div>`;
+        }
+        return seatButtonsHtml;
+    }
+
+    function selectSeatForRide(startLocation, endLocation, date, time, host) {
+        const rides = getRides();
+        const currentUser = getCurrentUser();
+
+        for (let ride of rides) {
+            if (ride.startLocation === startLocation && ride.endLocation === endLocation && ride.date === date && ride.time === time && ride.host === host) {
+                const availableSeats = Object.keys(ride.seatLayout).filter(seat => ride.seatLayout[seat]);
+                if (availableSeats.length === 0) {
+                    alert('No available seats');
+                    return;
+                }
+
+                let seatSelectionHtml = '<p>Select a seat:</p><div class="seat-layout">';
+                availableSeats.forEach(seat => {
+                    seatSelectionHtml += `<button class="seat-button available" onclick="joinRide('${startLocation}', '${endLocation}', '${date}', '${time}', '${host}', '${seat}')">${seat}</button>`;
+                });
+                seatSelectionHtml += '</div>';
+
+                const ridesList = document.getElementById('rides-list');
+                ridesList.innerHTML = seatSelectionHtml;
+                break;
+            }
+        }
+    }
+
+    function joinRide(startLocation, endLocation, date, time, host, seat) {
+        const currentUser = getCurrentUser();
+        const rides = getRides();
+
+        for (let ride of rides) {
+            if (ride.startLocation === startLocation && ride.endLocation === endLocation && ride.date === date && ride.time === time && ride.host === host) {
+                if (!ride.riders.some(r => r.username === currentUser)) {
+                    ride.riders.push({ username: currentUser, seat: seat });
+                    ride.seatLayout[seat] = false;
+                    saveRides(rides);
+                    alert(`You have joined the ride and selected seat ${seat}.`);
+                    window.location.reload();
+                    return;
+                } else {
+                    alert('You are already part of this ride.');
+                    return;
+                }
+            }
+        }
+    }
+
+    function saveRides(rides) {
+        localStorage.setItem('rides', JSON.stringify(rides));
+    }
+
+    function selectSeat(seat, isAvailable) {
+        if (!isAvailable) return;
+
+        const seatButtons = document.querySelectorAll('.seat-button');
+        seatButtons.forEach(button => button.classList.remove('selected'));
+        const selectedButton = Array.from(seatButtons).find(button => button.innerText === seat);
+        selectedButton.classList.add('selected');
+    }
+
+    function logout() {
+        localStorage.removeItem('currentUser');
+        window.location.href = '../templates/login.html';
+    }
+
+    function home() {
+        window.location.href = '../templates/home.html';
+    }
+
+    function hostRidePage() {
+        window.location.href = '../templates/host.html';
+    }
+
+    function viewMyRides() {
+        window.location.href = '../templates/myRides.html';
+    }
+
+    function viewAllRides() {
+        window.location.href = '../templates/allRides.html';
+    }
+
+</script>
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+</body>
+</html>
